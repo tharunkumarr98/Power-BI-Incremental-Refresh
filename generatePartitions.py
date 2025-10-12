@@ -1,3 +1,5 @@
+#Set the refresh start date, end date, archive start date, and archive end date based on the effective date, refresh policy, and archive policy.
+#Then, generate the partition names for both refresh and archive partitions based on their respective granularities
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 def generate_smart_powerbi_partitions(
@@ -95,11 +97,13 @@ def generate_smart_powerbi_partitions(
                 tempdate -= relativedelta(months=1)
         elif refresh_granularity == 'quarter':
             tempdate = archive_end_date - relativedelta(years=1)
+            addedYears = 0
             while tempdate >= archive_start_date:
                 archive_partitions.append(tempdate.strftime("%Y"))
                 tempdate -= relativedelta(years=1)
-            archive_start_date = archive_start_date.replace(month=1,day=1) + relativedelta(years=archive_number) 
-            tempdate = archive_end_date - relativedelta(months=3)
+                addedYears += 1
+            archive_start_date = archive_start_date.replace(month=12,day=31) + relativedelta(years=addedYears) 
+            tempdate = archive_end_date 
             while tempdate >= archive_start_date:
                 archive_partitions.append(tempdate.strftime("%Y") + "Q" + str((tempdate.month - 1) // 3 + 1))
                 tempdate -= relativedelta(months=3)
@@ -165,4 +169,4 @@ def generate_smart_powerbi_partitions(
                 tempdate -= timedelta(days=1)
     return [archive_partitions, refresh_partitions]
 
-print(generate_smart_powerbi_partitions(4, 'year', 10, 'quarter', datetime(2025, 10, 12)))
+print(generate_smart_powerbi_partitions(3, 'year', 3, 'quarter', datetime(2025, 10, 12)))
