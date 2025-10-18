@@ -1,2 +1,3 @@
-config.py
+refreshFromLocal/config.py
 junk/
+__pycache__/

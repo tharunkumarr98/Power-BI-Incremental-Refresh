@@ -3,7 +3,7 @@ from dateutil.relativedelta import relativedelta
 import requests
 import time
 import math
-import config
+import refreshFromLocal.config as config
 from termcolor import cprint
 
 _gr_order = ["day", "month", "quarter", "year"]  
