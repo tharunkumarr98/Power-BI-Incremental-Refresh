@@ -3,7 +3,7 @@ from dateutil.relativedelta import relativedelta
 import requests
 import time
 import math
-import refreshFromLocal.config as config
+import config as config
 from termcolor import cprint
 
 _gr_order = ["day", "month", "quarter", "year"]  
@@ -190,7 +190,7 @@ def refresh_partitions_in_batches(tableName:str ,partitions:list):
             raise Exception(f"Failed to get token: {response.status_code} {response.text}")
     fullEndPoint = f"{config.rootEndPoint }groups/{config.workspaceId}/datasets/{config.datasetId}/refreshes"    
     token = get_token()
-    batchCount = math.ceil(len(partitions) / config.batchCount) if len(partitions) > 0 else 0
+    batchCount = math.ceil(len(partitions) / config.batchSize) if len(partitions) > 0 else 0
 
 
     def getrefreshStatus():
@@ -206,47 +206,48 @@ def refresh_partitions_in_batches(tableName:str ,partitions:list):
         return response.status_code
 
 
-    cprint(f"Total Batches to process: {batchCount}",'blue')
+    
     for batch_num in range(batchCount):
         objects = []
-        temp = partitions[batch_num * config.batchCount : (batch_num + 1) * config.batchCount]
+        temp = partitions[batch_num * config.batchSize : (batch_num + 1) * config.batchSize]
         for i in temp:
             objects.append({"table":tableName, "partition": i})
         config.payload["objects"] = objects
+        # wait until service is idle before triggering this batch
+        while True:
+            status = getrefreshStatus()
+            cur_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            cprint(f"Before triggering the first batch at {cur_time} last refresh status: {status}",'blue')
+            if status in ["Completed", "Failed", "None"]:
+                cprint("🏁 All to set to start",'green')
+                break
+            cprint("⏱️ Waiting for {delay} seconds before checking status...",'yellow')
+            time.sleep(config.delay)
 
         try:
-            # wait until service is idle before triggering this batch
-            while True:
-                status = getrefreshStatus()
-                cur_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                cprint(f"Current Status at {cur_time}: {status}",'green' if status=="Completed" else 'red' if status=="Failed" else 'yellow')
-                if status in ["Completed", "Failed", "None"]:
-                    break
-                cprint("Waiting while the refresh is running",'yellow')
-                time.sleep(config.delay)
-
+            cprint(f"📋 Total Batches to process: {batchCount}",'blue')
             # trigger the refresh for this batch
-            cprint(f"Triggering for batch {batch_num + 1} with partitions: {temp}",'yellow')
+            cprint(f"🏹 Triggering for batch {batch_num + 1} with partitions: {temp}",'yellow')
             resp = postRefresh(payload=config.payload)
             if resp != 202:
-                cprint(f"Failed to trigger batch {batch_num + 1 }, response: {resp}",'red')
+                cprint(f"🔴 Failed to trigger batch {batch_num + 1 }, response: {resp}",'red')
                 # decide whether to retry or continue to next batch
                 continue
             else:
-                cprint(f"Batch {batch_num + 1} triggered successfully.",'blue')
+                cprint(f"🎯 Batch {batch_num + 1} triggered successfully.",'blue')
 
             # poll until this triggered refresh finishes
             while True:
-                cprint(f"Waiting for {config.delay} seconds before checking status...",'yellow')
+                cprint(f"⏱️ Waiting for {config.delay} seconds before checking status...",'yellow')
                 time.sleep(config.delay)
                 status = getrefreshStatus()
                 cur_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                cprint(f"Current Status {cur_time}: {status}",'green' if status=="Completed" else 'red' if status=="Failed" else 'yellow')
+                cprint(f"🟢 Current status {cur_time}: {status}",'yellow')
                 if status in ["Completed", "Failed", "None"]:
-                    cprint(f"Batch {batch_num + 1} finished with status: {status}",'green' if status=="Completed" else 'red')
+                    cprint(f"🏎️ Batch {batch_num + 1} finished with status: {status}",'green' if status=="Completed" else 'red')
                     if batch_num + 1 == batchCount:
-                        cprint("All batches processed.",'blue')
+                        cprint(f"✅ All batches processed.",'blue')
                     break
 
         except Exception as e:
-            cprint(f"Error while running the API: {e}",'red')
+            cprint(f"🔴 Error while running the API: {e}",'red')

@@ -1,3 +1,4 @@
 refreshFromLocal/config.py
 junk/
 __pycache__/
+refreshFromLocal/__pycache__/

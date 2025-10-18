@@ -1,4 +1,4 @@
-import refreshFromLocal.utils as utils
+import utils as utils
 from datetime import datetime
 
 
@@ -13,5 +13,8 @@ Refresh_All_Paritions = True # Set to True to refresh all partitions, any boolea
 
 if __name__ == "__main__":
     partitions = utils.generate_smart_powerbi_partitions(Archive_period, Archive_granularity, Refresh_period, Refresh_granularity, datetime.today(),True)
-    utils.refresh_partitions_in_batches(TableName ,partitions["All"])
+    if Refresh_All_Paritions:
+        utils.refresh_partitions_in_batches(TableName ,partitions["All"])
+    else:
+        utils.refresh_partitions_in_batches(TableName ,partitions["Refresh"])
 
