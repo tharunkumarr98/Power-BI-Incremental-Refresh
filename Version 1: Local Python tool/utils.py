@@ -214,14 +214,14 @@ def refresh_partitions_in_batches(tableName:str ,partitions:list):
             objects.append({"table":tableName, "partition": i})
         config.payload["objects"] = objects
         # wait until service is idle before triggering this batch
-        while True:
+        while True and batch_num == 0:
             status = getrefreshStatus()
             cur_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             cprint(f"Before triggering the first batch at {cur_time} last refresh status: {status}",'blue')
             if status in ["Completed", "Failed", "None"]:
                 cprint("🏁 All to set to start",'green')
                 break
-            cprint("⏱️ Waiting for {delay} seconds before checking status...",'yellow')
+            cprint("⏱️  Waiting for {delay} seconds before checking status...",'yellow')
             time.sleep(config.delay)
 
         try:
@@ -238,7 +238,7 @@ def refresh_partitions_in_batches(tableName:str ,partitions:list):
 
             # poll until this triggered refresh finishes
             while True:
-                cprint(f"⏱️ Waiting for {config.delay} seconds before checking status...",'yellow')
+                cprint(f"⏱️  Waiting for {config.delay} seconds before checking status...",'yellow')
                 time.sleep(config.delay)
                 status = getrefreshStatus()
                 cur_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
